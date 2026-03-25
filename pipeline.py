@@ -25,6 +25,52 @@ logging.basicConfig(
 logger = logging.getLogger("pipeline")
 
 
+def process_song(
+    title: str,
+    artist: str,
+    config: PipelineConfig,
+    fetcher: Optional[LyricsFetcher] = None,
+    romanizer: Optional[LyricsRomanizer] = None,
+    translator: Optional[LyricsTranslator] = None,
+    structurer: Optional[LyricsStructurer] = None,
+) -> dict:
+    """Process a single song through all 4 steps."""
+    # Lazy init components if not provided
+    fetcher = fetcher or LyricsFetcher(config)
+    romanizer = romanizer or LyricsRomanizer(config)
+    translator = translator or LyricsTranslator(config)
+    structurer = structurer or LyricsStructurer(config)
+
+    try:
+        # Step 1 - Fetch raw lyrics
+        raw = fetcher.fetch(title, artist)
+        if raw is None:
+            return structurer.make_error_entry(title, artist, "lyrics_not_found")
+
+        # Step 2 - Romanize
+        romanized = romanizer.romanize(raw["lyrics"], raw["detected_language"])
+
+        # Step 3 - Translate
+        translated = translator.translate(raw["lyrics"], raw["detected_language"])
+
+        # Step 4 - Structure into final JSON
+        structured = structurer.structure(
+            title=raw["title"],
+            artist=raw["artist"],
+            original_lyrics=raw["lyrics"],
+            romanized_lyrics=romanized,
+            translated_lyrics=translated,
+            source_language=raw["detected_language"],
+            target_language=config.target_language,
+            metadata=raw.get("metadata", {}),
+        )
+        return structured
+
+    except Exception as exc:
+        logger.error("  Failed for '%s - %s': %s", artist, title, exc, exc_info=True)
+        return structurer.make_error_entry(title, artist, str(exc))
+
+
 def run_pipeline(
     songs: list[dict],
     config: PipelineConfig,
@@ -32,14 +78,6 @@ def run_pipeline(
 ) -> list[dict]:
     """
     Execute the full 4-step lyrics pipeline.
-
-    Args:
-        songs: List of dicts with 'title' and 'artist' keys.
-        config: PipelineConfig instance with API credentials and options.
-        output_path: Optional file path to write the final JSON output.
-
-    Returns:
-        List of structured song objects ready for line-by-line display.
     """
     fetcher = LyricsFetcher(config)
     romanizer = LyricsRomanizer(config)
@@ -53,40 +91,17 @@ def run_pipeline(
         artist = song.get("artist", "Unknown")
         logger.info("[%s/%s] Processing: %s - %s", i, len(songs), artist, title)
 
-        try:
-            # Step 1 - Fetch raw lyrics
-            raw = fetcher.fetch(title, artist)
-            if raw is None:
-                logger.warning("  Skipping — lyrics not found.")
-                results.append(structurer.make_error_entry(title, artist, "lyrics_not_found"))
-                continue
+        structured = process_song(
+            title, artist, config, fetcher, romanizer, translator, structurer
+        )
+        results.append(structured)
 
-            # Step 2 - Romanize (no-op for already-Roman scripts)
-            romanized = romanizer.romanize(raw["lyrics"], raw["detected_language"])
-
-            # Step 3 - Translate
-            translated = translator.translate(raw["lyrics"], raw["detected_language"])
-
-            # Step 4 - Structure into final JSON
-            structured = structurer.structure(
-                title=raw["title"],
-                artist=raw["artist"],
-                original_lyrics=raw["lyrics"],
-                romanized_lyrics=romanized,
-                translated_lyrics=translated,
-                source_language=raw["detected_language"],
-                target_language=config.target_language,
-                metadata=raw.get("metadata", {}),
-            )
-
-            results.append(structured)
+        if "error" not in structured:
             logger.info("  Done: %d lines structured.", len(structured["lines"]))
+        else:
+            logger.warning("  Skipped: %s", structured.get("error"))
 
-        except Exception as exc:
-            logger.error("  Failed: %s", exc, exc_info=True)
-            results.append(structurer.make_error_entry(title, artist, str(exc)))
-
-        # Polite delay between songs to respect API rate limits
+        # Polite delay
         if i < len(songs):
             time.sleep(config.request_delay_seconds)
 
