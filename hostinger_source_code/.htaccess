@@ -1,0 +1,13 @@
+RewriteEngine On
+
+# Route API calls to api.php
+RewriteRule ^api/(.*)$ api.php?route=$1 [QSA,L]
+
+# Serve static files directly
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# Everything else -> index.html
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]

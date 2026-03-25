@@ -1,0 +1,31 @@
+# Environments
+.env
+.venv/
+env/
+venv/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Logs
+*.log
+lyrflow.log
+
+# Mac/OS
+.DS_Store
+Thumbs.db
+
+# Output & Local testing
+output/
+R&D/
+test_*.py
+
+# Caches
+static/demo_cache.json
+hostinger_source_code/demo_cache.json
+
+# Claude
+.claude/

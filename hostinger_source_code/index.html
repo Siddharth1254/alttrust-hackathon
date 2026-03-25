@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LyrFlow</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #030305;
+            --surface: rgba(255, 255, 255, 0.04);
+            --surface2: rgba(255, 255, 255, 0.08);
+            --border: rgba(255, 255, 255, 0.1);
+            --border-hover: rgba(255, 255, 255, 0.2);
+            --text: #ffffff;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --accent: #8b5cf6;
+            --accent-dim: rgba(139, 92, 246, 0.15);
+            --accent-glow: rgba(139, 92, 246, 0.4);
+            --green: #10b981;
+            --green-dim: rgba(16, 185, 129, 0.15);
+            --pink: #ec4899;
+            --pink-dim: rgba(236, 72, 153, 0.15);
+            --blue: #3b82f6;
+            --blue-dim: rgba(59, 130, 246, 0.15);
+            --orange: #f59e0b;
+            --orange-dim: rgba(245, 158, 11, 0.15);
+            --red: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+            letter-spacing: -0.01em;
+        }
+
+        /* ── Dynamic Mesh Background ── */
+        .bg-glow {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            z-index: 0;
+            background: radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.15), transparent 25%),
+                        radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.15), transparent 25%);
+            animation: breathingBg 15s ease-in-out infinite alternate;
+        }
+
+        @keyframes breathingBg {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.1); opacity: 1; }
+        }
+
+        .bg-glow::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            opacity: 0.02;
+            mix-blend-mode: overlay;
+        }
+
+        .wrapper {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        /* ── Nav ── */
+        nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 2rem;
+        }
+
+        .logo { 
+            font-size: 1.4rem; 
+            font-weight: 800; 
+            letter-spacing: -0.8px; 
+            background: linear-gradient(to right, #fff, #a1a1aa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .logo span { 
+            background: linear-gradient(135deg, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-badge {
+            font-size: 0.7rem;
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.05);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            font-weight: 500;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        /* ── Hero ── */
+        .hero {
+            text-align: center;
+            padding: 4rem 0 3rem;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .hero.compact { padding: 1rem 0 2rem; transform: scale(0.98); opacity: 0.9; }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-weight: 800;
+            line-height: 1.05;
+            letter-spacing: -0.04em;
+            margin-bottom: 1.2rem;
+            background: linear-gradient(180deg, #FFFFFF 0%, #A1A1AA 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-wrap: balance;
+        }
+
+        .hero.compact h1 { display: none; }
+
+        .hero p.subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 500px;
+            margin: 0 auto 2.5rem;
+            line-height: 1.6;
+            text-wrap: balance;
+        }
+
+        .hero.compact p.subtitle { display: none; }
+
+        /* ── Search Form (Glassmorphism) ── */
+        .search-form {
+            max-width: 620px;
+            margin: 0 auto;
+            display: flex;
+            background: rgba(20, 20, 30, 0.4);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 18px;
+            padding: 8px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
+        }
+
+        .search-form:focus-within {
+            border-color: rgba(139, 92, 246, 0.5);
+            box-shadow: 0 0 0 4px var(--accent-dim), 0 20px 50px -15px rgba(139, 92, 246, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .input-group { flex: 1; display: flex; align-items: center; }
+
+        .search-form input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text);
+            font-size: 1rem;
+            padding: 0.8rem 1rem;
+            font-family: inherit;
+            font-weight: 500;
+        }
+
+        .search-form input::placeholder { color: var(--text-muted); font-weight: 400; }
+
+        .input-sep {
+            width: 1px;
+            height: 24px;
+            background: var(--border);
+            margin: 0 0.5rem;
+        }
+
+        .go-btn {
+            padding: 0.8rem 2rem;
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px -3px rgba(236, 72, 153, 0.4);
+        }
+
+        .go-btn:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 25px -5px rgba(236, 72, 153, 0.6); 
+            filter: brightness(1.1);
+        }
+        .go-btn:active { transform: translateY(0); }
+        .go-btn:disabled { opacity: 0.5; filter: grayscale(1); cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* ── Demo chips ── */
+        .demo-section { margin-top: 2.5rem; }
+        .hero.compact .demo-section { display: none; }
+
+        .demo-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .demo-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            justify-content: center;
+        }
+
+        .demo-chip {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255,255,255,0.03);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.85rem;
+        }
+
+        .demo-chip:hover {
+            border-color: rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.06);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px -5px rgba(0,0,0,0.3);
+        }
+
+        .demo-chip .chip-title { font-weight: 600; color: var(--text); }
+        .demo-chip .chip-sep { color: var(--text-muted); font-size: 0.7rem; }
+        .demo-chip .chip-artist { color: var(--text-secondary); }
+
+        /* ── Pipeline steps ── */
+        .pipeline-box {
+            max-width: 620px;
+            margin: 2.5rem auto 0;
+            display: none;
+            text-align: left;
+        }
+
+        .pipeline-box.visible { display: block; animation: fadeIn 0.5s ease; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .pipe-step {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.8rem 1.2rem;
+            border-radius: 14px;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid transparent;
+            opacity: 0.3;
+            transition: all 0.4s ease;
+        }
+
+        .pipe-step.active {
+            opacity: 1;
+            background: rgba(139, 92, 246, 0.05);
+            border-color: rgba(139, 92, 246, 0.2);
+            transform: scale(1.02);
+            box-shadow: 0 10px 30px -10px rgba(139, 92, 246, 0.2);
+        }
+
+        .pipe-step.done {
+            opacity: 1;
+            background: rgba(16, 185, 129, 0.05);
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+
+        .pipe-step.error {
+            opacity: 1;
+            background: rgba(239, 68, 68, 0.05);
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        .pipe-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            flex-shrink: 0;
+            transition: all 0.3s;
+        }
+
+        .pipe-step.active .pipe-icon { background: var(--accent-dim); color: var(--accent); box-shadow: 0 0 15px var(--accent-glow); }
+        .pipe-step.done .pipe-icon { background: var(--green-dim); color: var(--green); }
+        .pipe-step.error .pipe-icon { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+
+        .pipe-label { flex: 1; font-weight: 500; color: var(--text-secondary); }
+        .pipe-step.active .pipe-label { color: var(--text); }
+        .pipe-step.done .pipe-label { color: var(--green); }
+        .pipe-step.error .pipe-label { color: var(--red); }
+
+        .pipe-detail { font-size: 0.75rem; color: var(--text-muted); font-weight: 400; }
+        .pipe-step.done .pipe-detail { color: rgba(16, 185, 129, 0.6); }
+
+        .mini-spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(139, 92, 246, 0.3);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Results ── */
+        .results {
+            display: none;
+            padding: 1rem 0 5rem;
+            animation: fadeSlideIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .results.visible { display: block; }
+
+        .results-header {
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: rgba(20, 20, 30, 0.4);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px -20px rgba(0,0,0,0.5);
+        }
+
+        .results-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            flex-shrink: 0;
+            box-shadow: 0 10px 20px -5px rgba(236, 72, 153, 0.4);
+        }
+
+        .results-meta { flex: 1; }
+
+        .results-meta h2 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 0.2rem;
+        }
+
+        .results-meta .artist-name { color: var(--text-secondary); font-size: 0.95rem; font-weight: 500; }
+
+        .results-stats {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.6rem;
+            font-size: 0.75rem;
+        }
+
+        .stat-badge {
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+        }
+
+        .stat-lines { background: var(--surface2); color: var(--text-secondary); border: 1px solid var(--border); }
+        .stat-ko { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(59, 130, 246, 0.2); }
+        .stat-ja { background: var(--pink-dim); color: var(--pink); border: 1px solid rgba(236, 72, 153, 0.2); }
+        .stat-en { background: var(--green-dim); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.2); }
+
+        .back-link {
+            padding: 0.6rem 1.2rem;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.03);
+            color: var(--text);
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover { 
+            border-color: var(--border-hover); 
+            background: rgba(255,255,255,0.08);
+            transform: translateY(-1px);
+        }
+
+        /* ── Toggles ── */
+        .toggles {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            background: rgba(0,0,0,0.2);
+            padding: 6px;
+            border-radius: 12px;
+            display: inline-flex;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .pill {
+            padding: 0.5rem 1.2rem;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .pill.on {
+            background: var(--surface2);
+            color: var(--text);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .pill.on:first-child { color: var(--accent); }
+        .pill.on:last-child { color: var(--blue); }
+
+        /* ── Lyrics List ── */
+        .lyrics-list { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
+
+        .lyric-item {
+            padding: 1rem 1.2rem;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .lyric-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px -10px rgba(0,0,0,0.4);
+        }
+
+        .lyric-item::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0; width: 3px;
+            background: transparent;
+            transition: background 0.2s;
+        }
+
+        .lyric-item:hover::before { background: var(--accent); }
+
+        .line-top { display: flex; align-items: flex-start; }
+
+        .line-num {
+            width: 32px;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 0.8rem;
+            margin-top: 2px;
+            font-variant-numeric: tabular-nums;
+            flex-shrink: 0;
+            opacity: 0.5;
+        }
+
+        .line-info { flex: 1; }
+
+        .line-lang {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.55rem;
+            font-weight: 800;
+            margin-right: 0.8rem;
+            text-transform: uppercase;
+            flex-shrink: 0;
+            margin-top: 3px;
+            letter-spacing: 0.5px;
+        }
+
+        .line-lang-ko { background: var(--blue-dim); color: var(--blue); }
+        .line-lang-ja { background: var(--pink-dim); color: var(--pink); }
+        .line-lang-en { background: var(--green-dim); color: var(--green); }
+        .line-lang-ko-mixed { background: var(--orange-dim); color: var(--orange); }
+        .line-lang-ja-mixed { background: var(--pink-dim); color: var(--pink); }
+
+        .line-content-group { flex: 1; }
+
+        .line-original { font-size: 1.05rem; color: var(--text); font-weight: 500; line-height: 1.5; }
+
+        .line-romanized {
+            margin-top: 6px;
+            margin-left: calc(32px + 40px);
+            font-size: 0.9rem;
+            color: var(--accent);
+            opacity: 0.9;
+            font-weight: 400;
+            display: none;
+            line-height: 1.5;
+        }
+
+        .line-translation {
+            margin-top: 4px;
+            margin-left: calc(32px + 40px);
+            font-size: 0.85rem;
+            color: #93c5fd;
+            opacity: 0.8;
+            font-weight: 400;
+            display: none;
+            line-height: 1.5;
+        }
+
+        .show-rom .line-romanized { display: block; }
+        .show-tr .line-translation { display: block; }
+
+        /* ── Footer ── */
+        footer {
+            text-align: center;
+            padding: 3rem 0;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            border-top: 1px solid rgba(255,255,255,0.05);
+            margin-top: 2rem;
+        }
+
+        footer span { color: var(--text-secondary); font-weight: 600; }
+
+        @media (max-width: 600px) {
+            .hero { padding: 3rem 0 2rem; }
+            .hero h1 { font-size: 2.2rem; }
+            .search-form { flex-direction: column; padding: 12px; border-radius: 20px; }
+            .input-group { flex-direction: column; }
+            .input-sep { width: 100%; height: 1px; margin: 0.5rem 0; }
+            .results-header { flex-direction: column; text-align: center; gap: 1rem; }
+            .back-link { margin: 0.5rem auto 0; width: 100%; }
+            .lyric-item { padding: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-glow"></div>
+
+    <div class="wrapper">
+        <nav>
+            <div class="logo">Lyr<span>Flow</span></div>
+            <div class="nav-right">
+                <div class="nav-badge">Hackathon Aivancity 2026</div>
+            </div>
+        </nav>
+
+        <section class="hero" id="heroSection">
+            <h1>Romanize any<br>song instantly.</h1>
+            <p class="subtitle">Search any K-Pop or J-Pop song. Get instant romanization and French translation powered by AI.</p>
+
+            <div class="search-form">
+                <div class="input-group">
+                    <input type="text" id="artistInput" placeholder="Artist" autofocus>
+                    <div class="input-sep"></div>
+                    <input type="text" id="titleInput" placeholder="Song title">
+                </div>
+                <button class="go-btn" id="goBtn" onclick="doProcess()">Go</button>
+            </div>
+
+            <div class="demo-section">
+                <div class="demo-label">Try a demo</div>
+                <div class="demo-grid" id="demoGrid"></div>
+            </div>
+
+            <!-- Pipeline progress -->
+            <div class="pipeline-box" id="pipelineBox">
+                <div class="pipe-step" id="step1">
+                    <div class="pipe-icon">1</div>
+                    <div class="pipe-label">Fetching lyrics</div>
+                    <div class="pipe-detail" id="step1Detail"></div>
+                </div>
+                <div class="pipe-step" id="step2">
+                    <div class="pipe-icon">2</div>
+                    <div class="pipe-label">Cleaning & preparing</div>
+                    <div class="pipe-detail" id="step2Detail"></div>
+                </div>
+                <div class="pipe-step" id="step3">
+                    <div class="pipe-icon">3</div>
+                    <div class="pipe-label">Detecting languages</div>
+                    <div class="pipe-detail" id="step3Detail"></div>
+                </div>
+                <div class="pipe-step" id="step4">
+                    <div class="pipe-icon">4</div>
+                    <div class="pipe-label">Romanizing & translating</div>
+                    <div class="pipe-detail" id="step4Detail"></div>
+                </div>
+                <div class="pipe-step" id="step5">
+                    <div class="pipe-icon">5</div>
+                    <div class="pipe-label">Building results</div>
+                    <div class="pipe-detail" id="step5Detail"></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="results" id="resultsSection">
+            <div class="results-header">
+                <div class="results-icon">&#9835;</div>
+                <div class="results-meta">
+                    <h2 id="resultTitle"></h2>
+                    <div class="artist-name" id="resultArtist"></div>
+                    <div class="results-stats" id="resultStats"></div>
+                </div>
+                <button class="back-link" onclick="goBack()">New search</button>
+            </div>
+
+            <div class="toggles">
+                <button class="pill on" id="pillRom" onclick="toggleRom()">Romanization</button>
+                <button class="pill on" id="pillTr" onclick="toggleTr()">Traduction FR</button>
+            </div>
+
+            <ul class="lyrics-list show-rom show-tr" id="lyricsList"></ul>
+        </section>
+
+        <footer>
+            <span>LyrFlow</span> &mdash; Lyrics Romanization & Translation Pipeline
+        </footer>
+    </div>
+
+    <script>
+        let demoCache = {};
+
+        const $ = id => document.getElementById(id);
+
+        // ── Typing animation ──
+        const examples = [
+            { artist: "BTS", title: "No More Dream" },
+            { artist: "IU", title: "Celebrity" },
+            { artist: "Stray Kids", title: "MIROH" },
+            { artist: "Ado", title: "Usseewa" },
+            { artist: "YOASOBI", title: "Idol" },
+        ];
+        let exIdx = 0, charIdx = 0, deleting = false, pause = 0, field = 'artist';
+
+        function animatePlaceholder() {
+            const a = $('artistInput'), t = $('titleInput');
+            if (a.value || t.value) return;
+            if (document.activeElement === a || document.activeElement === t) {
+                a.placeholder = 'Artist'; t.placeholder = 'Song title'; return;
+            }
+            const ex = examples[exIdx];
+            const el = field === 'artist' ? a : t;
+            const txt = field === 'artist' ? ex.artist : ex.title;
+
+            if (!deleting) {
+                if (charIdx <= txt.length) {
+                    el.placeholder = txt.substring(0, charIdx) + '\u258C';
+                    charIdx++;
+                } else if (field === 'artist') {
+                    field = 'title'; charIdx = 0;
+                } else {
+                    pause++;
+                    el.placeholder = pause % 10 < 5 ? txt + '\u258C' : txt;
+                    if (pause > 28) { deleting = true; pause = 0; field = 'title'; }
+                }
+            } else {
+                const dTxt = field === 'title' ? ex.title : ex.artist;
+                if (charIdx > 0) { charIdx--; el.placeholder = dTxt.substring(0, charIdx) + '\u258C'; }
+                else { el.placeholder = '';
+                    if (field === 'title') { field = 'artist'; charIdx = ex.artist.length; }
+                    else { deleting = false; field = 'artist'; charIdx = 0; exIdx = (exIdx + 1) % examples.length; }
+                }
+            }
+        }
+        setInterval(animatePlaceholder, 60);
+
+        ['artistInput','titleInput'].forEach(id => {
+            $(id).addEventListener('focus', () => { $(id).placeholder = id === 'artistInput' ? 'Artist' : 'Song title'; });
+        });
+
+        // ── Demos ──
+        async function loadDemos() {
+            try {
+                const r = await fetch('api/demos');
+                demoCache = await r.json();
+                const g = $('demoGrid');
+                g.innerHTML = Object.entries(demoCache).map(([k, s]) =>
+                    `<div class="demo-chip" onclick="loadDemo('${esc(k)}')">
+                        <span class="chip-artist">${esc(s.artist)}</span>
+                        <span class="chip-sep">&middot;</span>
+                        <span class="chip-title">${esc(s.title)}</span>
+                    </div>`
+                ).join('');
+            } catch(e) {}
+        }
+
+        function loadDemo(key) { if (demoCache[key]) showResults(demoCache[key]); }
+
+        // ── Pipeline steps UI ──
+        function resetPipeline() {
+            for (let i = 1; i <= 5; i++) {
+                const s = $('step' + i);
+                s.className = 'pipe-step';
+                s.querySelector('.pipe-icon').innerHTML = i;
+                $('step' + i + 'Detail').textContent = '';
+            }
+        }
+
+        function setStep(n, state, detail) {
+            const s = $('step' + n);
+            s.className = 'pipe-step ' + state;
+            const icon = s.querySelector('.pipe-icon');
+            if (state === 'active') icon.innerHTML = '<div class="mini-spinner"></div>';
+            else if (state === 'done') icon.innerHTML = '\u2713';
+            else if (state === 'error') icon.innerHTML = '\u2717';
+            if (detail) $('step' + n + 'Detail').textContent = detail;
+        }
+
+        // ── Process ──
+        $('artistInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('titleInput').focus(); });
+        $('titleInput').addEventListener('keydown', e => { if (e.key === 'Enter') doProcess(); });
+
+        async function doProcess() {
+            const artist = $('artistInput').value.trim();
+            const title = $('titleInput').value.trim();
+            if (!artist || !title) return;
+
+            $('goBtn').disabled = true;
+            $('heroSection').classList.add('compact');
+            $('pipelineBox').classList.add('visible');
+            resetPipeline();
+
+            // Step 1: Fetch
+            setStep(1, 'active', 'lyrics.ovh');
+
+            try {
+                const resp = await fetch('api/process', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ artist, title })
+                });
+
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    setStep(1, 'error', err.error || 'Failed');
+                    $('goBtn').disabled = false;
+                    return;
+                }
+
+                setStep(1, 'done', 'Lyrics retrieved');
+
+                // Simulate visual pipeline steps (processing happens server-side)
+                setStep(2, 'active');
+                await sleep(300);
+                setStep(2, 'done', 'Lines cleaned');
+
+                setStep(3, 'active');
+                await sleep(250);
+                setStep(3, 'done', 'Languages identified');
+
+                setStep(4, 'active', 'AI processing...');
+                const data = await resp.json();
+                setStep(4, 'done', `${data.lyrics.length} lines processed`);
+
+                await sleep(200);
+                setStep(5, 'active');
+                await sleep(300);
+                setStep(5, 'done', 'Ready');
+
+                await sleep(400);
+                showResults(data);
+
+            } catch (e) {
+                setStep(1, 'error', e.message);
+            }
+            $('goBtn').disabled = false;
+        }
+
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        // ── Results ──
+        function showResults(data) {
+            $('heroSection').style.display = 'none';
+            $('resultsSection').classList.add('visible');
+
+            $('resultTitle').textContent = data.title;
+            $('resultArtist').textContent = data.artist;
+
+            const c = data.lang_counts || {};
+            let s = `<span class="stat-badge stat-lines">${data.lyrics.length} lines</span>`;
+            if (c.ko) s += `<span class="stat-badge stat-ko">${c.ko} Korean</span>`;
+            if (c.ja) s += `<span class="stat-badge stat-ja">${c.ja} Japanese</span>`;
+            if (c.en) s += `<span class="stat-badge stat-en">${c.en} English</span>`;
+            $('resultStats').innerHTML = s;
+
+            const list = $('lyricsList');
+            list.className = 'lyrics-list show-rom show-tr';
+            $('pillRom').className = 'pill on';
+            $('pillTr').className = 'pill on';
+
+            list.innerHTML = data.lyrics.map((l, i) => {
+                const lang = l.language || 'en';
+                const tag = lang.replace('-mixed', '+').substring(0, 2);
+                const hasRom = l.romanized && l.romanized !== l.line;
+                const hasTr = l.translation && l.translation !== 'null' && l.translation !== null;
+                return `<li class="lyric-item">
+                    <div class="line-top">
+                        <span class="line-num">${i + 1}</span>
+                        <span class="line-lang line-lang-${lang}">${tag}</span>
+                        <span class="line-original">${esc(l.line)}</span>
+                    </div>
+                    ${hasRom ? `<div class="line-romanized">${esc(l.romanized)}</div>` : ''}
+                    ${hasTr ? `<div class="line-translation">${esc(l.translation)}</div>` : ''}
+                </li>`;
+            }).join('');
+        }
+
+        function goBack() {
+            $('heroSection').style.display = 'block';
+            $('heroSection').classList.remove('compact');
+            $('pipelineBox').classList.remove('visible');
+            $('resultsSection').classList.remove('visible');
+            $('artistInput').value = '';
+            $('titleInput').value = '';
+            $('artistInput').focus();
+        }
+
+        function toggleRom() { $('pillRom').classList.toggle('on'); $('lyricsList').classList.toggle('show-rom'); }
+        function toggleTr() { $('pillTr').classList.toggle('on'); $('lyricsList').classList.toggle('show-tr'); }
+
+        function esc(s) {
+            if (!s) return '';
+            const d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        loadDemos();
+    </script>
+</body>
+</html>
