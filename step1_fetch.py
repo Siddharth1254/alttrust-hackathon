@@ -42,14 +42,13 @@ def detect_language(text: str) -> str:
         return "unknown"
 
     hangul_ratio = counts["hangul"] / total_meaningful
-    kana_ratio   = counts["kana"]   / total_meaningful
-    cjk_ratio    = counts["cjk"]    / total_meaningful
+    kana_ratio   = (counts["kana"] + counts["cjk"]) / total_meaningful
     latin_ratio  = counts["latin"]  / total_meaningful
 
-    if hangul_ratio > 0.4:
-        return "korean" if latin_ratio < 0.2 else "mixed_ko_en"
-    if (kana_ratio + cjk_ratio) > 0.3:
-        return "japanese" if latin_ratio < 0.2 else "mixed_ja_en"
+    if hangul_ratio > 0.05:  # Even a small amount of Hangul means it's likely Korean
+        return "korean" if latin_ratio < 0.1 else "mixed_ko_en"
+    if kana_ratio > 0.05:
+        return "japanese" if latin_ratio < 0.1 else "mixed_ja_en"
     if latin_ratio > 0.5:
         return "english"
     return "unknown"

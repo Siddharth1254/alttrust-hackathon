@@ -50,6 +50,19 @@ def _slugify(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Language Mapping
+# ---------------------------------------------------------------------------
+
+_LANG_CODES = {
+    "korean": "ko",
+    "japanese": "ja",
+    "english": "en",
+    "mixed_ko_en": "ko",
+    "mixed_ja_en": "ja",
+    "unknown": "un"
+}
+
+# ---------------------------------------------------------------------------
 # Structurer class
 # ---------------------------------------------------------------------------
 
@@ -70,62 +83,54 @@ class LyricsStructurer:
     ) -> dict:
         """
         Build the final structured song object.
-
-        Zips original / romanized / translated lines together so that
-        every line object carries all three representations at the same index.
         """
         original_lines  = original_lyrics.splitlines()
         romanized_lines = romanized_lyrics.splitlines() if romanized_lyrics else None
         translated_lines = translated_lyrics.splitlines() if translated_lyrics else None
 
-        # Pad shorter lists with empty strings so zip is safe
+        # Pad shorter lists with empty strings
         max_len = len(original_lines)
         if romanized_lines is not None:
             romanized_lines = self._pad(romanized_lines, max_len)
         if translated_lines is not None:
             translated_lines = self._pad(translated_lines, max_len)
 
-        lines = []
+        lyrics = []
         for i, orig in enumerate(original_lines):
-            line_obj: dict = {
-                "index": i,
-                "is_blank": not orig.strip(),
-            }
+            line_obj: dict = {}
 
             if self.config.include_original_in_lines:
-                line_obj["original"] = orig
+                line_obj["line"] = orig
 
             if romanized_lines is not None:
                 line_obj["romanized"] = romanized_lines[i] if i < len(romanized_lines) else ""
             elif self.config.always_include_romanized:
-                line_obj["romanized"] = orig   # for Latin-script songs, same as original
+                line_obj["romanized"] = orig
 
             if translated_lines is not None:
                 line_obj["translation"] = translated_lines[i] if i < len(translated_lines) else ""
 
-            lines.append(line_obj)
+            lyrics.append(line_obj)
 
         return {
-            "id": f"{_slugify(artist)}__{_slugify(title)}",
             "title": title,
             "artist": artist,
-            "source_language": source_language,
-            "target_language": target_language,
+            "language": _LANG_CODES.get(source_language, source_language),
+            "lyrics": lyrics,
+            # Keeping these for internal API use, but they don't block the visual goal
+            "id": f"{_slugify(artist)}__{_slugify(title)}",
             "metadata": metadata or {},
-            "lines": lines,
             "error": None,
         }
 
     def make_error_entry(self, title: str, artist: str, reason: str) -> dict:
         """Return a minimal error placeholder when a song cannot be processed."""
         return {
-            "id": f"{_slugify(artist)}__{_slugify(title)}",
             "title": title,
             "artist": artist,
-            "source_language": None,
-            "target_language": self.config.target_language,
-            "metadata": {},
-            "lines": [],
+            "language": "un",
+            "lyrics": [],
+            "id": f"{_slugify(artist)}__{_slugify(title)}",
             "error": reason,
         }
 
