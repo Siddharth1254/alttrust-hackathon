@@ -15,10 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const artist = artistInput.value.trim();
         const title = titleInput.value.trim();
 
-        if (!artist || !title) {
-            alert('Please enter both artist and title.');
-            return;
-        }
+        if (!artist || !title) return;
 
         // Reset UI
         resultsSection.classList.add('hidden');
@@ -31,23 +28,15 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const response = await fetch('/process_single', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ artist, title })
             });
 
-            if (!response.ok) {
-                throw new Error('Pipeline error: ' + response.statusText);
-            }
+            if (!response.ok) throw new Error('Pipeline service error');
 
             const data = await response.json();
+            if (data.error) throw new Error(data.error);
 
-            if (data.error) {
-                throw new Error(data.error);
-            }
-
-            // Render Results
             renderResults(data);
             
         } catch (err) {
@@ -64,37 +53,40 @@ document.addEventListener('DOMContentLoaded', () => {
         songArtistDisplay.innerText = song.artist;
         langBadge.innerText = song.language.toUpperCase();
 
-        song.lyrics.forEach(line => {
-            const lineEl = document.createElement('div');
-            lineEl.className = 'lyric-line';
+        song.lyrics.forEach((line, index) => {
+            const card = document.createElement('div');
+            card.className = 'karaoke-card';
+            card.style.animationDelay = `${index * 0.05}s`;
             
             if (!line.line || !line.line.trim()) {
-                lineEl.classList.add('blank');
+                card.classList.add('blank');
             } else {
-                const original = document.createElement('div');
-                original.className = 'original-text';
-                original.innerText = line.line;
-                lineEl.appendChild(original);
+                // Line
+                const lineMain = document.createElement('div');
+                lineMain.className = 'line-main';
+                lineMain.innerText = line.line;
+                card.appendChild(lineMain);
 
-                if (line.romanized && line.romanized !== line.line) {
+                // Romanization (if different)
+                if (line.romanized && line.romanized.toLowerCase() !== line.line.toLowerCase()) {
                     const roman = document.createElement('div');
-                    roman.className = 'romanized-text';
-                    roman.innerText = line.romanized;
-                    lineEl.appendChild(roman);
+                    roman.className = 'line-roman';
+                    roman.innerHTML = `<span class="card-label">Pronunciation</span>${line.romanized}`;
+                    card.appendChild(roman);
                 }
 
+                // Translation
                 if (line.translation) {
                     const trans = document.createElement('div');
-                    trans.className = 'translated-text';
-                    trans.innerText = line.translation;
-                    lineEl.appendChild(trans);
+                    trans.className = 'line-trans';
+                    trans.innerHTML = `<span class="card-label">Translation</span>${line.translation}`;
+                    card.appendChild(trans);
                 }
             }
             
-            lyricsContainer.appendChild(lineEl);
+            lyricsContainer.appendChild(card);
         });
         
-        // Scroll to results
         resultsSection.scrollIntoView({ behavior: 'smooth' });
     }
 });
